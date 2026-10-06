@@ -1,7 +1,7 @@
 import numpy as np
 import pathlib
 import os, random
-#import cv2, librosa
+import cv2, librosa
 #import tensorflow as tf
 
 # -- Encode raw features into one-hot codes -------------------------------------------------
@@ -476,15 +476,17 @@ def CIFAR_HOG(X_raw_features):
 	for fd in fds:
 		fd_quantiles.append(np.quantile(fd, 0.5))
 
+	X_hog = []
 	for i in range(X_raw_features.shape[0]):
 		fd = hog.compute(X_raw_features[i])
+		X_hog.append(fd.tolist())
 		for j, each_fd in enumerate(fd):
 			if each_fd >= fd_quantiles[j]:
 				X_bool[i][j] = 1
 			else:
 				X_bool[i][j] = 0
 
-	return X_bool
+	return X_bool, X_hog, fd_quantiles
 
 # -- preprocessing, specifically for KWS ---------------------------------------------------------
 # refer: https://www.tensorflow.org/tutorials/audio/simple_audio

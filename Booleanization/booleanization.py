@@ -35,50 +35,38 @@ for dataset in all_datasets:
 			no_bool_bits = 1
 			thresholds = [[75] for i in range(no_raw_features)]			
 
-		# ------------- KMNIST --------------------------------------------------
-		case "kmnist":
-			X_train = np.load(r"raw_dataset/kmnist/kmnist-train-imgs.npz")['arr_0']
-			X_test = np.load(r"raw_dataset/kmnist/kmnist-test-imgs.npz")['arr_0']
-			Y_train = np.load(r"raw_dataset/kmnist/kmnist-train-labels.npz")['arr_0']
-			Y_test = np.load(r"raw_dataset/kmnist/kmnist-test-labels.npz")['arr_0']
-			X_train = np.where(X_train.reshape((X_train.shape[0], 28*28)) > 75, 1, 0) 
-			X_test = np.where(X_test.reshape((X_test.shape[0], 28*28)) > 75, 1, 0)
-
-		# ------------- FMNIST --------------------------------------------------
-		case "fmnist":
-			(X_train, Y_train), (X_test, Y_test) = fashion_mnist.load_data()
-			X_train = np.where(X_train.reshape((X_train.shape[0], 28*28)) > 75, 1, 0) 
-			X_test = np.where(X_test.reshape((X_test.shape[0], 28*28)) > 75, 1, 0)
-
 		# ------------- CIFAR --------------------------------------------------
 		case "cifar":
 			(X_train_org, Y_train), (X_test_org, Y_test) = cifar10.load_data()
 			Y_train=Y_train.reshape(Y_train.shape[0])
 			Y_test=Y_test.reshape(Y_test.shape[0])
-			#animals = np.array([2, 3, 4, 5, 6, 7])
-			#Y_train = np.where(np.isin(Y_train, animals), 1, 0)
-			#Y_test = np.where(np.isin(Y_test, animals), 1, 0)
+			animals = np.array([2, 3, 4, 5, 6, 7])
+			Y_train = np.where(np.isin(Y_train, animals), 1, 0)
+			Y_test = np.where(np.isin(Y_test, animals), 1, 0)
 			X_raw_features = np.concatenate((X_train_org, X_test_org), axis=0)
-			X = preprocessing.CIFAR_HOG(X_raw_features)
+			X, X_hog, thresholds = preprocessing.CIFAR_HOG(X_raw_features)
+
+			no_raw_features = len(X_hog[0])
+			no_bool_bits = 1
 
 			X_train = X[0:len(Y_train)]
 			X_test = X[-len(Y_test):]
+
+			X_train_hog = X_hog[0:len(Y_train)]
+			X_test_hog = X_hog[-len(Y_test):]
+			dist_max_min = np.max(X_train_hog) - np.min(X_train_hog)
+			X_train_norm = X_train_hog / (dist_max_min/2) - 1
+			X_test_norm = X_test_hog / (dist_max_min/2) - 1
+			np.save(r"bool_datasets/"+dataset+'/X_train_norm.npy', X_train_norm)
+			np.save(r"bool_datasets/"+dataset+'/X_test_norm.npy', X_test_norm)			
+
+			c_samples = np.round(np.array(X_test_hog[:no_c_samples]) * 100000).astype(int)
+			thresholds =  [[int(np.round(float(x*100000)))] for x in thresholds]
+			c_bool_samples = X_test[0:no_c_samples]
 
 			X_train=np.array(X_train)
 			X_test=np.array(X_test)
 
-		# ------------- Keyword Spotting (CUDA support must be explicitly allocated) ----------------------------------------
-		case "kws":
-			[train_x, Y_train, test_x, Y_test] = preprocessing.kws_dataset(r"raw_dataset/mini_speech_commands")
-			X_raw_features = np.concatenate((train_x, test_x), axis=0)
-			X = preprocessing.thermo_encoding(X_raw_features, 3)
-
-			X_train = X[0:len(Y_train)]
-			X_test = X[-len(Y_test):]
-
-			X_train=np.array(X_train)
-			X_test=np.array(X_test)								
-		
 		# ------------- IRIS ----------------------------------------------------
 		case "iris":
 			iris = datasets.load_iris()
@@ -96,6 +84,33 @@ for dataset in all_datasets:
 			c_samples = X_test_raw[0:no_c_samples]*10
 			c_bool_samples = X_test[0:no_c_samples]
 			no_bool_bits = 3
+
+		# ------------- KMNIST --------------------------------------------------
+		case "kmnist":
+			X_train = np.load(r"raw_dataset/kmnist/kmnist-train-imgs.npz")['arr_0']
+			X_test = np.load(r"raw_dataset/kmnist/kmnist-test-imgs.npz")['arr_0']
+			Y_train = np.load(r"raw_dataset/kmnist/kmnist-train-labels.npz")['arr_0']
+			Y_test = np.load(r"raw_dataset/kmnist/kmnist-test-labels.npz")['arr_0']
+			X_train = np.where(X_train.reshape((X_train.shape[0], 28*28)) > 75, 1, 0) 
+			X_test = np.where(X_test.reshape((X_test.shape[0], 28*28)) > 75, 1, 0)
+
+		# ------------- FMNIST --------------------------------------------------
+		case "fmnist":
+			(X_train, Y_train), (X_test, Y_test) = fashion_mnist.load_data()
+			X_train = np.where(X_train.reshape((X_train.shape[0], 28*28)) > 75, 1, 0) 
+			X_test = np.where(X_test.reshape((X_test.shape[0], 28*28)) > 75, 1, 0)
+
+		# ------------- Keyword Spotting (CUDA support must be explicitly allocated) ----------------------------------------
+		case "kws":
+			[train_x, Y_train, test_x, Y_test] = preprocessing.kws_dataset(r"raw_dataset/mini_speech_commands")
+			X_raw_features = np.concatenate((train_x, test_x), axis=0)
+			X = preprocessing.thermo_encoding(X_raw_features, 3)
+
+			X_train = X[0:len(Y_train)]
+			X_test = X[-len(Y_test):]
+
+			X_train=np.array(X_train)
+			X_test=np.array(X_test)								
 
 		# ------------- Digits ----------------------------------------------------
 		case "digits":
