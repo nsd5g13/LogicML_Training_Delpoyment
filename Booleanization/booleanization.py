@@ -22,9 +22,15 @@ for dataset in all_datasets:
 		# ------------- MNIST --------------------------------------------------
 		case "mnist":
 			(X_train, Y_train), (X_test, Y_test) = mnist.load_data()
-			dist_max_min = np.max(X_train) - np.min(X_train)
-			X_train_norm = X_train / (dist_max_min/2) - 1
-			X_test_norm = X_test / (dist_max_min/2) - 1
+			#dist_max_min = np.max(X_train) - np.min(X_train)
+			#X_train_norm = X_train / (dist_max_min/2) - 1
+			#X_test_norm = X_test / (dist_max_min/2) - 1
+			q_low = np.percentile(X_train, 1, axis=0)
+			q_high = np.percentile(X_train, 99, axis=0)
+			X_train_clip = np.clip(X_train, q_low, q_high)
+			X_test_clip = np.clip(X_test, q_low, q_high)
+			X_train_norm = (2 * (X_train_clip - q_low) / (q_high - q_low) - 1)
+			X_test_norm = (2 * (X_test_clip - q_low) / (q_high - q_low) - 1)
 			np.save(r"bool_datasets/"+dataset+'/X_train_norm.npy', X_train_norm.reshape((X_train.shape[0], 28*28)))
 			np.save(r"bool_datasets/"+dataset+'/X_test_norm.npy', X_test_norm.reshape((X_test.shape[0], 28*28)))
 			no_raw_features = 28*28
@@ -54,9 +60,12 @@ for dataset in all_datasets:
 
 			X_train_hog = X_hog[0:len(Y_train)]
 			X_test_hog = X_hog[-len(Y_test):]
-			dist_max_min = np.max(X_train_hog) - np.min(X_train_hog)
-			X_train_norm = X_train_hog / (dist_max_min/2) - 1
-			X_test_norm = X_test_hog / (dist_max_min/2) - 1
+			q_low = np.percentile(X_train_hog, 1, axis=0)
+			q_high = np.percentile(X_train_hog, 99, axis=0)
+			X_train_clip = np.clip(X_train_hog, q_low, q_high)
+			X_test_clip = np.clip(X_test_hog, q_low, q_high)
+			X_train_norm = (2 * (X_train_clip - q_low) / (q_high - q_low) - 1)
+			X_test_norm = (2 * (X_test_clip - q_low) / (q_high - q_low) - 1)
 			np.save(r"bool_datasets/"+dataset+'/X_train_norm.npy', X_train_norm)
 			np.save(r"bool_datasets/"+dataset+'/X_test_norm.npy', X_test_norm)			
 
@@ -76,9 +85,15 @@ for dataset in all_datasets:
 			Y = iris.target
 			X_train, Y_train, X_test, Y_test = preprocessing.DatasetSplit(X, Y, 0.8)
 			X_train_raw, _, X_test_raw, _ = preprocessing.DatasetSplit(iris.data, Y, 0.8)
-			dist_max_min = np.max(X_train_raw) - np.min(X_train_raw)
-			X_train_norm = X_train_raw / (dist_max_min/2) - 1
-			X_test_norm = X_test_raw / (dist_max_min/2) - 1
+			#dist_max_min = np.max(X_train_raw) - np.min(X_train_raw)
+			#X_train_norm = X_train_raw / (dist_max_min/2) - 1
+			#X_test_norm = X_test_raw / (dist_max_min/2) - 1
+			q_low = np.percentile(X_train_raw, 1, axis=0)
+			q_high = np.percentile(X_train_raw, 99, axis=0)
+			X_train_clip = np.clip(X_train_raw, q_low, q_high)
+			X_test_clip = np.clip(X_test_raw, q_low, q_high)
+			X_train_norm = (2 * (X_train_clip - q_low) / (q_high - q_low) - 1)
+			X_test_norm = (2 * (X_test_clip - q_low) / (q_high - q_low) - 1)
 			np.save(r"bool_datasets/"+dataset+'/X_train_norm.npy', X_train_norm)
 			np.save(r"bool_datasets/"+dataset+'/X_test_norm.npy', X_test_norm)
 			c_samples = X_test_raw[0:no_c_samples]*10

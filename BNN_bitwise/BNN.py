@@ -19,13 +19,15 @@ no_classes = len(list(set(Y_train.tolist())))
 
 no_raw_features = len(X_train[0])
 no_classes = len(list(set(Y_train)))
-N_MAX = max([no_raw_features, 128, no_classes])
+N_MAX = max([no_raw_features, 256, no_classes])
 
 # -------------- model structure ---------------------------------------------------------
 model = tf.keras.models.Sequential()
 
 # In the first layer we only quantize the weights and not the input
-model.add(lq.layers.QuantDense(128, use_bias=False, kernel_quantizer="ste_sign", kernel_constraint="weight_clip", input_quantizer=None))
+model.add(lq.layers.QuantDense(256, use_bias=False, kernel_quantizer="ste_sign", kernel_constraint="weight_clip", input_quantizer=None))
+
+model.add(lq.layers.QuantDense(128, use_bias=False, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip"))
 
 model.add(lq.layers.QuantDense(no_classes, use_bias=False, input_quantizer="ste_sign", kernel_quantizer="ste_sign", kernel_constraint="weight_clip"))
 
@@ -33,13 +35,40 @@ model.add(tf.keras.layers.Flatten())
 
 model.add(tf.keras.layers.Activation("softmax"))
 
-model.compile(optimizer='adam',
+optimizer = tf.keras.optimizers.SGD(
+    lr=0.001,
+    momentum=0.9
+)
+
+model.compile(optimizer=optimizer,
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
 # -------------- training and testing ----------------------------------------------------
+lr_schedule = tf.keras.callbacks.LearningRateScheduler(
+    lambda epoch: (
+        0.001 if epoch < 50 else
+        0.0003 if epoch < 100 else
+        0.0001
+    )
+)
+
+class TestAccuracyCallback(tf.keras.callbacks.Callback):
+    def on_epoch_end(self, epoch, logs=None):
+        test_loss, test_acc = self.model.evaluate(
+            X_test,
+            Y_test,
+            verbose=0
+        )
+        print(
+            f" - test_loss: {test_loss:.4f} - test_accuracy: {test_acc * 100:.2f}%"
+        )
+
+
+test_accuracy_callback = TestAccuracyCallback()
+
 no_epochs = 100
-model.fit(X_train, Y_train, epochs=no_epochs)
+model.fit(X_train, Y_train, epochs=no_epochs, batch_size=128,callbacks=[lr_schedule,test_accuracy_callback])
 test_loss, test_acc = model.evaluate(X_test, Y_test)
 print(f"Test accuracy {test_acc * 100:.2f} %")
 
